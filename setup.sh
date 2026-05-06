@@ -670,4 +670,22 @@ else
     echo "Update from upstream:"
     echo "  cd $TEMPLATE_DIR && bash update.sh"
     echo ""
+
+    # === Post-install validation (WP-265 Ф8) ===
+    # Не запускаем автоматически — это interactive prompt. Skip в --core (нет gh/claude).
+    if ! $CORE_ONLY; then
+        echo "Финальная проверка инсталляции (рекомендуется):"
+        echo "  validate-режим setup.sh проверит: env-конфиг, обязательные файлы,"
+        echo "  extensions, доступность MCP, структурные инварианты."
+        echo ""
+        read -p "Запустить проверку сейчас? (y/n) " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo ""
+            bash "$TEMPLATE_DIR/setup.sh" --validate
+        else
+            echo "Пропущено. Запустить позже: cd $TEMPLATE_DIR && bash setup.sh --validate"
+        fi
+        echo ""
+    fi
 fi

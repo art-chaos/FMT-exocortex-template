@@ -558,6 +558,58 @@ $IWE_ROOT/.claude
 fi
 echo ""
 
+# ---------- Раздел 7: Repo permissions integrity (WP-5/WP-7 Stability-4b) ----------
+#
+# Детектор: файлы в .git/objects/ должны быть owned пользователем, который запускает
+# pull/commit. Если в результате ssh-as-root операции (или sudo без -u) появились
+# root-owned объекты — последующий pull под обычным юзером падает с
+# "insufficient permission for adding an object to repository database".
+#
+# Источник: 11→12 мая 2026, dirty pull-repos warnings на tsekh-1 — корень оказался
+# в root-owned .git/objects после ssh-as-root команд из mac.
+#
+# Релевантно для Linux (где ssh может ходить под разными user). На macOS обычно
+# всё под одним юзером — пропускаем.
+
+echo "## 7. Repo permissions integrity"
+echo ""
+
+if [ "$OS_NAME" != "Linux" ]; then
+    echo "_Пропущено (этот хост — $OS_NAME, проверка релевантна для multi-user Linux-серверов)._"
+    echo ""
+else
+    EXPECTED_USER="${IWE_AUDIT_USER:-$(whoami)}"
+    PERM_VIOLATIONS=0
+    echo "Ожидаемый владелец: \`$EXPECTED_USER\` (override: IWE_AUDIT_USER=...)"
+    echo ""
+
+    echo "| Репо | Чужих файлов в .git | Пример |"
+    echo "|---|---|---|"
+    for repo_git in $(find -L "$IWE_ROOT" -maxdepth 3 -type d -name '.git' 2>/dev/null); do
+        repo="${repo_git%/.git}"
+        repo_name="${repo#$IWE_ROOT/}"
+        set +e
+        # find -not -user может не работать на NixOS если whoami не в /etc/passwd
+        FOREIGN=$(find "$repo_git" -not -user "$EXPECTED_USER" 2>/dev/null | head -5)
+        set -e
+        if [ -n "$FOREIGN" ]; then
+            FOREIGN_COUNT=$(echo "$FOREIGN" | wc -l | tr -d ' ')
+            PERM_VIOLATIONS=$((PERM_VIOLATIONS + 1))
+            FIRST=$(echo "$FOREIGN" | head -1)
+            printf "| \`%s\` | %s | \`%s\` |\n" "$repo_name" "$FOREIGN_COUNT" "$FIRST"
+        fi
+    done
+    echo ""
+
+    if [ $PERM_VIOLATIONS -gt 0 ]; then
+        echo "**Найдено $PERM_VIOLATIONS репо с чужими файлами в .git/.** Решение: \`sudo chown -R $EXPECTED_USER:$EXPECTED_USER <repo>/.git\`. Профилактика: ssh не под root, либо явный \`sudo -u $EXPECTED_USER git ...\`."
+        OPTIONAL_MISSING=$((OPTIONAL_MISSING + 1))
+    else
+        echo "✅ Все репо имеют корректного владельца .git/."
+    fi
+fi
+echo ""
+
 # ---------- Exit code ----------
 
 # 2 = критичные gaps; 1 = warnings; 0 = ОК

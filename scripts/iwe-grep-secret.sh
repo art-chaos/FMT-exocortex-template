@@ -182,7 +182,7 @@ scan_layer_env() {
   fi
 
   log_layer_done "1" "$hits"
-  ((TOTAL_HITS += hits))
+  (( TOTAL_HITS += hits )) || true
 }
 
 # ── Layer 2: Cloud env (Railway + CF Workers) ────────────────────────────
@@ -315,7 +315,7 @@ scan_layer_cloud() {
   fi
 
   log_layer_done "2" "$hits"
-  ((TOTAL_HITS += hits))
+  (( TOTAL_HITS += hits )) || true
 }
 
 # ── Layer 3: PostgreSQL metadata (pg_user_mapping) ───────────────────────
@@ -366,7 +366,7 @@ scan_layer_pg() {
   fi
 
   log_layer_done "3" "$hits"
-  ((TOTAL_HITS += hits))
+  (( TOTAL_HITS += hits )) || true
 }
 
 # ── Layer 4: Smoke-tests ─────────────────────────────────────────────────
@@ -378,7 +378,7 @@ scan_layer_smoke() {
   # TODO: подключение через каждую роль, FDW-функция, API call
 
   log_layer_done "4" "$hits"
-  ((TOTAL_HITS += hits))
+  (( TOTAL_HITS += hits )) || true
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────
